@@ -4,7 +4,7 @@ import random
 
 GOAL_COLOR = [255,0,0]
 PLAYER_COLOR = [0,0,255]
-UNKNOWN_COLOR = [128,128,128]
+UNKNOWN_COLOR = [0,0,0]
 EMPTY_COLOR = [255,255,255]
 direction_to_vector = {
 	'RIGHT':[0,1],
@@ -13,6 +13,22 @@ direction_to_vector = {
 	'DOWN':[1,0]
 }
 
+def color_to_char(color):
+
+	color = list(color)
+	if color == GOAL_COLOR:
+		return 'G'
+	if color == PLAYER_COLOR:
+		return 'P'
+	if color == UNKNOWN_COLOR:
+		return 'U'
+	if color == EMPTY_COLOR:
+		return 'W'
+	else:
+		print('dead color found')
+		return 'W'
+
+
 def make_gif(frames, path):
 
     frame_one = frames[0]
@@ -20,7 +36,7 @@ def make_gif(frames, path):
                save_all=True, duration=100, loop=0)
 
 class Maze():
-	def __init__(self, goal_position = np.asarray([0,0]), initial_position = np.asarray([25,25]), dimensions = [32,32]):
+	def __init__(self, goal_position = np.asarray([0,0]), initial_position = np.asarray([3,3]), dimensions = [32,32]):
 		self.goal_position = goal_position
 		self.initial_position = initial_position
 		self.width = dimensions[0]
@@ -30,6 +46,11 @@ class Maze():
 		self.total_reward = 0
 		self.over = False
 		self.visible_mask = np.zeros(shape = [self.width,self.height, 3], dtype=np.uint8)
+		i, j = self.position
+		for h in range(i-1, i+2):
+			for w in range(j-1, j+2):
+				if self.bound_check([h,w]):
+					self.visible_mask[h][w] = [1,1,1]
 
 	def reset(self):
 		self.goal_position = np.random.randint(0, self.width, [2], dtype = np.uint8)
@@ -38,6 +59,11 @@ class Maze():
 		self.total_reward = 0
 		self.over = False
 		self.visible_mask = np.zeros(shape = [self.width,self.height, 3], dtype=np.uint8)
+		i, j = self.position
+		for h in range(i-1, i+2):
+			for w in range(j-1, j+2):
+				if self.bound_check([h,w]):
+					self.visible_mask[h][w] = [1,1,1]
 
 	def underlying_scene(self):
 		underlying_scene = np.ones(shape = [self.width,self.height,3], dtype=np.uint8)*255 #full white canvas
@@ -88,6 +114,46 @@ class Maze():
 
 		return reward*1.0
 
+	def venture(self, direction):
+		assert direction in ['UP','DOWN','RIGHT','LEFT']
+		new_position = self.position + direction_to_vector[direction]
+
+		next_state_string = ''
+		print(self.position)
+		print('moves to')
+		print(new_position)
+		if self.bound_check(new_position):
+			new_scene = self.visible_scene()
+			new_scene[self.position[0]][self.position[1]] = EMPTY_COLOR
+			print(new_scene[new_position[0]][new_position[1]])
+			print(new_scene[self.position[0]][self.position[1]])
+			i, j = new_position
+			for h in range(i-1, i+2):
+				for w in range(j-1, j+2):
+					if self.bound_check([h,w]):
+						new_scene[h][w] = EMPTY_COLOR
+						if self.goal_position[0] == h and self.goal_position[1] == w:
+							new_scene[h][w] = GOAL_COLOR
+			new_scene[new_position[0]][new_position[1]] = PLAYER_COLOR
+
+			print('scene:')
+			#print(new_scene)
+			next_state_string = self.state_string(new_scene)
+		else:
+			next_state_string = self.state_string(self.visible_scene())
+
+		return next_state_string
+
+	def state_string(self, visible_scene):
+
+		string_representation = ''
+		for i in range(self.height):
+			for j in range(self.width):
+				string_representation += color_to_char(visible_scene[i][j])
+			string_representation+='\n'
+
+		return string_representation
+
 
 	def path(self, steps):
 		pictures = [self.picture()]
@@ -103,7 +169,7 @@ class Maze():
 		return (x >= 0 and x < self.height) and (y >= 0 and y < self.width)
 
 
-first_maze = Maze()
+first_maze = Maze(dimensions = [5,5])
 
 ## test 1
 #img = Image.fromarray(first_maze.picture(), 'RGB')
@@ -131,6 +197,18 @@ first_maze = Maze()
 #	returns.append(sum(first_maze.rewards))
 #
 #print(sum(returns)/100)
+
+## test 4 venturing
+'''
+exploration = [first_maze.venture('UP'),
+			   first_maze.venture('DOWN'),
+			   first_maze.venture('LEFT'),]
+
+for e in exploration:
+	print(e)
+'''
+
+
 
 
 
