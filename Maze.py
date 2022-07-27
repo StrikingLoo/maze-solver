@@ -92,7 +92,7 @@ class Maze():
 		else:
 			reward = -1
 			if self.total_reward < -(10000):
-				reward = -1
+				reward = -100
 				self.over = True
 
 		# calculate and store reward
@@ -145,6 +145,17 @@ class Maze():
 		return next_state_string
 
 	def state_string(self, visible_scene):
+
+		string_representation = ''
+		for i in range(self.height):
+			for j in range(self.width):
+				string_representation += color_to_char(visible_scene[i][j])
+			string_representation+='\n'
+
+		return string_representation
+
+	def current_state_string(self):
+		visible_scene = self.visible_scene()
 
 		string_representation = ''
 		for i in range(self.height):
