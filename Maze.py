@@ -64,9 +64,9 @@ class Maze():
 		if self.bound_check(new_position):
 			self.position = new_position
 		else:
-			reward = -5
-			if self.total_reward < -(self.width * self.width):
-				reward = -50
+			reward = -1
+			if self.total_reward < -(10000):
+				reward = -1
 				self.over = True
 
 		# calculate and store reward

@@ -53,9 +53,8 @@ def discount_rewards(r):
 
 def policy_forward(x):
   h = np.dot(model['W1'], x)
-  h[h<0] = 0 # ReLU nonlinearity
-  logp = np.dot(model['W2'], h)
-  p = softmax(logp)
+  exp = np.exp(h)
+  p = exp/np.sum(exp)
 
   return p, h # return probability of taking action 2, and hidden state
 
