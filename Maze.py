@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 import random 
+import zlib
 
 GOAL_COLOR = [255,0,0]
 PLAYER_COLOR = [0,0,255]
@@ -97,7 +98,7 @@ class Maze():
 
 		# calculate and store reward
 		if (self.position[0] == self.goal_position[0]) and (self.position[1] == self.goal_position[1]):
-			reward = 100
+			reward = 1000
 			self.over = True
 		elif reward == 0:
 			reward = -1
@@ -155,7 +156,7 @@ class Maze():
 		return string_representation
 
 	def current_state_string(self):
-		visible_scene = self.visible_scene()
+		visible_scene = self.underlying_scene()
 
 		string_representation = ''
 		for i in range(self.height):
@@ -164,6 +165,10 @@ class Maze():
 			string_representation+='\n'
 
 		return string_representation
+
+	def compressed_state_rep(self):
+		string_rep = self.current_state_string()
+		return zlib.compress(string_rep.encode('ASCII'))
 
 
 	def path(self, steps):
@@ -219,7 +224,15 @@ for e in exploration:
 	print(e)
 '''
 
-
-
+## test 5 maze string rep compressed
+starting = zlib.decompress(first_maze.compressed_state_rep()).decode()
+print(starting)
+first_maze.move('RIGHT')
+forward = zlib.decompress(first_maze.compressed_state_rep()).decode()
+print(forward)
+first_maze.move('LEFT')
+forward = zlib.decompress(first_maze.compressed_state_rep()).decode()
+print(forward)
+assert(forward == starting)
 
 
