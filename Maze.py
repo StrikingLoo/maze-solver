@@ -29,6 +29,11 @@ def color_to_char(color):
 		print('dead color found')
 		return 'W'
 
+def manhattan_distance(pointA, pointB):
+	x , y = pointA
+	x2, y2 = pointB
+	return abs(x - x2) + abs(y - y2)
+
 
 def make_gif(frames, path):
 
@@ -87,21 +92,27 @@ class Maze():
 		assert direction in ['UP','DOWN','RIGHT','LEFT']
 		new_position = self.position + direction_to_vector[direction]
 		reward = 0
+		old_position = self.position
 
 		if self.bound_check(new_position):
 			self.position = new_position
 		else:
 			reward = -1
-			if self.total_reward < -(10000):
-				reward = -100
-				self.over = True
+
+		'''
+		if self.total_reward < -2*(self.width * self.height):
+			reward = -100
+			self.over = True
+		'''
 
 		# calculate and store reward
 		if (self.position[0] == self.goal_position[0]) and (self.position[1] == self.goal_position[1]):
-			reward = 1000
+			reward = 10 #self.width+self.height
 			self.over = True
-		elif reward == 0:
-			reward = -1
+		#elif manhattan_distance(self.goal_position, new_position) < manhattan_distance(self.goal_position, old_position):
+		#	reward = 0.1
+		#elif reward == 0:
+		#	reward = -1
 
 		self.rewards.append(reward)
 		self.total_reward += reward
@@ -168,7 +179,8 @@ class Maze():
 
 	def compressed_state_rep(self):
 		string_rep = self.current_state_string()
-		return zlib.compress(string_rep.encode('ASCII'))
+
+		return string_rep #zlib.compress(string_rep.encode('ASCII'))
 
 
 	def path(self, steps):
@@ -225,6 +237,7 @@ for e in exploration:
 '''
 
 ## test 5 maze string rep compressed
+'''
 starting = zlib.decompress(first_maze.compressed_state_rep()).decode()
 print(starting)
 first_maze.move('RIGHT')
@@ -235,4 +248,4 @@ forward = zlib.decompress(first_maze.compressed_state_rep()).decode()
 print(forward)
 assert(forward == starting)
 
-
+'''
