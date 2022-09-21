@@ -3,10 +3,11 @@ import pickle
 import random
 import zlib
 import numpy as np
+from PIL import Image
 
 def q(state, action, value_dict):
 	#print(f'value_dict: {value_dict}')
-	result = value_dict.get(state, {}).get(action, 100)
+	result = value_dict.get(state, {}).get(action, 10)
 	#print(result)
 	return result
 
@@ -21,10 +22,11 @@ def update(state, action, value, value_dict):
 GAMMA = 0.9
 alpha = 0.5
 
-MAZE_SIZE = 4
+MAZE_SIZE = 8
 EPISODES = 300
 #assert EPISODES > MAZE_SIZE**4
 number_before_metrics = 10
+GOAL = [2,0]
 ACTIONS = ['UP','DOWN','RIGHT','LEFT']
 
 def allowed_actions(input_state):
@@ -81,7 +83,7 @@ def state_values(values):
 		for j in range(MAZE_SIZE):
 			mock_env = Maze.Maze(dimensions = [MAZE_SIZE, MAZE_SIZE])
 			mock_env.position = np.asarray([i,j])
-			mock_env.goal_position = np.asarray([4, 4])
+			mock_env.goal_position = np.asarray(GOAL)
 			best_action = None
 			state = mock_env.compressed_state_rep()
 			best_value = float('-inf')
@@ -99,7 +101,7 @@ def state_values(values):
 
 def unique_starts(i):
 	position = [0, 0]
-	goal_position = [4, 4] 
+	goal_position = GOAL
 	'''
 	if i%2 == 0:
 		position[0] = abs(MAZE_SIZE - position[0]) -1
@@ -118,6 +120,8 @@ def train(env, save_to = 'models/model3.dump'):
 	rewards_list = []
 	steps_list = []
 	step = 0
+	last_path = []
+	first_path = []
 	for episoden in range(EPISODES):
 		env.reset()
 		position, goal_position = unique_starts(episoden)
@@ -132,29 +136,20 @@ def train(env, save_to = 'models/model3.dump'):
 		total_reward = 0
 		#step = 0
 		deltas = []
+
 		while (not env.over):
 			if episoden == 299:
 				print(f'state: \n{current_state}')
 				print(f'action chosen: {(action, action_v)}')
+				last_path.append(action)
+			if episoden == 0:
+				first_path.append(action)
+				
 
 			step +=1
 			reward = env.move(action)
 			total_reward += reward
 			next_state = env.compressed_state_rep()
-			
-			'''alpha = 0.3
-			if episoden > 100:
-				use_epsilon = 0.001
-			if episoden > 1000:
-				alpha = 0.1
-			if episoden > 5000:
-				use_epsilon = 1/5000
-				alpha = 0.01
-				[65.6, 72.9, 81.0, 72.9]
-				[72.9, 81.0, 90.0, 81.0]
-				[81.0, 90.0, 100.0, 90.0]
-				[90.0, 100.0, 28, 100.0]
-				'''
 
 			next_action, next_action_v = policy(values, next_state, epsilon = use_epsilon, verbose=(episoden==299))
 			
@@ -190,11 +185,34 @@ def train(env, save_to = 'models/model3.dump'):
 		output = str(steps_list)+'\n'+str(values)
 		f.write(output)
 
+	env.reset()
+	position, goal_position = unique_starts(episoden)
+	start_position = position
+	env.position = np.asarray(position)
+	env.goal_position = np.asarray(goal_position)
+	boards = env.path(last_path)
+	frames = [Image.fromarray(frame, 'RGB') for frame in boards]
+	path = 'media/last_iter_5.gif'
+	Maze.make_gif(frames, path)
+
+	env.reset()
+	position, goal_position = unique_starts(episoden)
+	start_position = position
+	env.position = np.asarray(position)
+	env.goal_position = np.asarray(goal_position)
+	boards = env.path(first_path)
+	frames = [Image.fromarray(frame, 'RGB') for frame in boards]
+	path = 'media/first_iter_5.gif'
+	Maze.make_gif(frames, path)
 
 	with open(save_to, 'wb') as handle:
 		pickle.dump(values, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-
-env = Maze.Maze(dimensions = [MAZE_SIZE, MAZE_SIZE])
+blocked_squares = [[i, i-1] for i in range(1,7)]
+env = Maze.Maze(dimensions = [MAZE_SIZE, MAZE_SIZE], blocked = blocked_squares)
 train(env)
+
+'''
+[3,0], [3,1], [3,2], [3,3], [3,4],[3,5], [3,6],[5,1], [5,2], [5,3], [5,4],[5,5], [5,6],[5,7],[6,5]]
+'''
 

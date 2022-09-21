@@ -7,6 +7,7 @@ GOAL_COLOR = [255,0,0]
 PLAYER_COLOR = [0,0,255]
 UNKNOWN_COLOR = [0,0,0]
 EMPTY_COLOR = [255,255,255]
+BLOCKED_COLOR = [1,1,1]
 direction_to_vector = {
 	'RIGHT':[0,1],
 	'LEFT':[0,-1],
@@ -25,6 +26,8 @@ def color_to_char(color):
 		return 'U'
 	if color == EMPTY_COLOR:
 		return 'W'
+	if color == BLOCKED_COLOR:
+		return 'B'
 	else:
 		print('dead color found')
 		return 'W'
@@ -42,13 +45,15 @@ def make_gif(frames, path):
                save_all=True, duration=100, loop=0)
 
 class Maze():
-	def __init__(self, goal_position = np.asarray([0,0]), initial_position = np.asarray([3,3]), dimensions = [32,32]):
+	def __init__(self, goal_position = np.asarray([0,0]), initial_position = np.asarray([3,3]), dimensions = [32,32], blocked = []):
 		self.goal_position = goal_position
 		self.initial_position = initial_position
 		self.width = dimensions[0]
 		self.height = dimensions[1]
 		self.position = initial_position
 		self.rewards = []
+		self.blocked = blocked
+		self.blocked_map = {str(k): True for k in blocked}
 		self.total_reward = 0
 		self.over = False
 		self.visible_mask = np.zeros(shape = [self.width,self.height, 3], dtype=np.uint8)
@@ -75,15 +80,19 @@ class Maze():
 		underlying_scene = np.ones(shape = [self.width,self.height,3], dtype=np.uint8)*255 #full white canvas
 		underlying_scene[self.position[0]][self.position[1]] = PLAYER_COLOR
 		underlying_scene[self.goal_position[0]][self.goal_position[1]] = GOAL_COLOR
+		
+		for blocked_square in self.blocked:
+			underlying_scene[blocked_square[0]][blocked_square[1]] = BLOCKED_COLOR
+		
 		return underlying_scene
 
 	def visible_scene(self):
 		underlying_scene = self.underlying_scene() #full picture
 		return underlying_scene * self.visible_mask
 
-	def picture(self):
+	def picture(self, fog = False):
 		IMG_SCALE_FACTOR = 16
-		scene = self.visible_scene()
+		scene = self.visible_scene() if fog else self.underlying_scene()
 		scene = scene.repeat(IMG_SCALE_FACTOR, axis=0).repeat(IMG_SCALE_FACTOR, axis=1)
 
 		return scene
@@ -94,25 +103,16 @@ class Maze():
 		reward = 0
 		old_position = self.position
 
-		if self.bound_check(new_position):
+		if self.bound_check(new_position) and (not self.bump(new_position)):
 			self.position = new_position
 		else:
 			reward = -1
 
-		'''
-		if self.total_reward < -2*(self.width * self.height):
-			reward = -100
-			self.over = True
-		'''
-
 		# calculate and store reward
 		if (self.position[0] == self.goal_position[0]) and (self.position[1] == self.goal_position[1]):
-			reward = 10 #self.width+self.height
+			reward = 10 
 			self.over = True
-		#elif manhattan_distance(self.goal_position, new_position) < manhattan_distance(self.goal_position, old_position):
-		#	reward = 0.1
-		#elif reward == 0:
-		#	reward = -1
+
 
 		self.rewards.append(reward)
 		self.total_reward += reward
@@ -125,6 +125,10 @@ class Maze():
 					self.visible_mask[h][w] = [1,1,1]
 
 		return reward*1.0
+
+	def bump(self, coordinates):
+		x, y = coordinates
+		return self.blocked_map.get(str([x, y]), False)
 
 	def venture(self, direction):
 		assert direction in ['UP','DOWN','RIGHT','LEFT']
